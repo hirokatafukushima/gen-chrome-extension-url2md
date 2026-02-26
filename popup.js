@@ -17,6 +17,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             return;
         }
 
+        // ポップアップのウィンドウ幅を設定（コンテンツに依存せず固定幅）
+        document.body.style.width = '160px';
+
         // ページ内から citation メタデータを取得する
         let citationData = null;
         if (!tab.url.startsWith("chrome://") && !tab.url.startsWith("edge://")) {
@@ -58,9 +61,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         }
 
-        // 成功メッセージの表示
+        // 成功メッセージの表示 → 1.5秒後に自動で閉じる
         statusElement.textContent = '✅ Done!';
-        okBtn.classList.remove('hidden');
+        setTimeout(() => {
+            window.close();
+        }, 1500);
 
     } catch (error) {
         statusElement.textContent = 'エラー: ' + error.message;
