@@ -1,0 +1,43 @@
+2026-02-26
+----
+#機能の要望
+閲覧しているブラウザのURLを，以下の5通りでマークダウン記法のリンクに変換してコピーする（マークダウンノートに貼り付けられるようにする。）
+
+[閲覧しているページのカテゴリー](URL)
+
+
+## 閲覧しているページのカテゴリーと変換するマークダウンリンクの対応
+- chatgpt.com ドメインであれば， [ChatGPT](URL)
+- gemini.google.com ドメインであれば， [Gemini](URL)
+- grok.comドメインであれば，[Grok](URL)
+- notebooklm.google.com であれば，[NotebookLM](URL)
+- claude.aiであれば，[Claude](URL)
+- mail.google.comであれば [Gmail](URL)
+- amazonであれば[Amazon page](URL)
+- その他のドメインであれば，[ページタイトル](URL)
+
+
+
+## 挙動
+拡張機能のアイコンを押す
+→ 上記のマークダウン記法のリンクがクリップボードにコピーされる
+→ 拡張機能ボタンの下に「✅  Done!」と表示され，OKを押すと表示が消える
+
+## その他
+- ボタンやフィードバックにアイコンは一切使いません。
+
+
+ここまでがMVPです。
+
+----
+## さらに期待される挙動
+
+MVPが動くことを確認したら，その後に以下の実装をしてほしいです。
+
+Amazonドメインについては，URLについては，必要な情報（商品ID）だけがURLとしてコピーされるようにしたい。
+
+例：
+[Amazon page](https://www.amazon.co.jp/%E3%82%B5%E3%83%B3%E3%83%AF%E3%83%80%E3%82%A4%E3%83%AC%E3%82%AF%E3%83%88-%E3%83%8E%E3%83%BC%E3%83%88%E3%83%91%E3%82%BD%E3%82%B3%E3%83%B3%E5%86%B7%E5%8D%B4%E3%83%91%E3%83%83%E3%83%89-43mm-%E3%82%BF%E3%83%96%E3%83%AC%E3%83%83%E3%83%88PC-ASSA-7-2/dp/B007M9AMOQ/ref=sr_1_5?__mk_ja_JP=%E3%82%AB%E3%82%BF%E3%82%AB%E3%83%8A&crid=2IXCUFB1HF20J&dib=eyJ2IjoiMSJ9.fWLaVsEIWx7BhP0xodD6ZUZ5Mh3X-J-3i4Ve8Q8vM9-FouEq4rciHGyO11V8fHOSyq4l6bzjeG6LsK2fhI-2w8GOPuSlvv5Jd6dx-AyyNuvSGjRam2vZG5vhxA-jV8t2YDjb2Xm7uHKG-JwggIHvbvSWi-BvNEHTZfFowvt8Hec4ebTlgZ7i3XX9EWRm9EYm58wyJFamSfp5jMM7KSBssu-ZshAf0Vlr-Yb9Zocao5tbrDDXzlsqpOLritDtLge7is72-ezmb7Mm1xJv1HB6dA8anabuwyb4E_vkIUoMbjQ.0Zsg6WiaqJAiO2Aj52xK7IH5UChPP9XeH8sDXp6E25Q&dib_tag=se&keywords=%E3%83%8E%E3%83%BC%E3%83%88PC%E7%94%A8%E5%86%B7%E5%8D%B4%E3%83%91%E3%83%83%E3%83%89&qid=1772064729&sprefix=%E3%83%8E%E3%83%BC%E3%83%88pc%E7%94%A8%E5%86%B7%E5%8D%B4%E3%83%91%E3%83%83%E3%83%89%2Caps%2C177&sr=8-5&ufe=app_do%3Aamzn1.fos.bf59e452-7c16-4eb0-8b6f-4f4edb3d8c50#averageCustomerReviewsAnchor)
+
+このような場合も，下記のようにしたい。
+[Amazon page](https://www.amazon.co.jp/dp/B007M9AMOQ/)

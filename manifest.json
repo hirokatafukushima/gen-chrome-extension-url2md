@@ -1,0 +1,14 @@
+{
+    "manifest_version": 3,
+    "name": "URL to Markdown Link Copy",
+    "version": "1.0",
+    "description": "閲覧中のページのURLをMarkdown形式でコピーします。一部ドメインのカテゴリ名自動変換やAmazonのURL短縮に対応しています。",
+    "permissions": [
+        "activeTab",
+        "clipboardWrite"
+    ],
+    "action": {
+        "default_popup": "popup.html",
+        "default_title": "Copy Markdown Link"
+    }
+}
