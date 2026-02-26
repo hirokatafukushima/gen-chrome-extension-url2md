@@ -61,11 +61,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         }
 
-        // 成功メッセージの表示 → 1.5秒後に自動で閉じる
+        // 成功メッセージの表示 → 0.5秒後に自動で閉じる
         statusElement.textContent = '✅ Done!';
         setTimeout(() => {
             window.close();
-        }, 1500);
+        }, 500);
 
     } catch (error) {
         statusElement.textContent = 'エラー: ' + error.message;
