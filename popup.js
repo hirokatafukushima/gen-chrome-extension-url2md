@@ -224,7 +224,7 @@ function generateMarkdownLink(url, title, citationData) {
             authorFormatted = isJapanese ? `${last1}・${last2}` : `${last1} & ${last2}`;
         } else {
             const last1 = extractLastName(authors[0]);
-            authorFormatted = isJapanese ? `${last1} 他.` : `${last1} et al.`;
+            authorFormatted = isJapanese ? `${last1} 他` : `${last1} et al.`;
         }
 
         category = `${authorFormatted}${year}`;
