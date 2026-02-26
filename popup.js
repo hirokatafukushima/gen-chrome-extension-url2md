@@ -86,7 +86,14 @@ function extractCitationMetadata() {
     // --- ソース1: HighWire Press メタタグ ---
     const hwAuthorTags = document.querySelectorAll('meta[name="citation_author"]');
     hwAuthorTags.forEach(tag => {
-        if (tag.content) authors.push(tag.content.trim());
+        if (tag.content) {
+            // CiNiiなどの場合、1つのタグの中に「高塩 理, 荒井 悠, 岡市 佳典」とカンマ区切りで入っていることがあるため分割する
+            const parts = tag.content.split(",");
+            parts.forEach(p => {
+                const trimmed = p.trim();
+                if (trimmed) authors.push(trimmed);
+            });
+        }
     });
 
     const hwDateTag = document.querySelector('meta[name="citation_publication_date"], meta[name="citation_date"], meta[name="citation_year"], meta[name="citation_online_date"]');
@@ -198,19 +205,23 @@ function generateMarkdownLink(url, title, citationData) {
         const titleToCheck = citationData.citationTitle || title || "";
         const isJapanese = /[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uf900-\uFAFF]/.test(titleToCheck);
 
-        // 「姓」を抽出するヘルパー（"Smith, John" -> "Smith", "John Smith" -> "Smith" (簡易判定), "山田 太郎" -> "山田"）
+        // 「姓」を抽出するヘルパー
+        // 例（英語）: "Smith, John" -> "Smith", "John Smith" -> "Smith"
+        // 例（日本語）: "山田 太郎" -> "山田", "山田　太郎" -> "山田"
         const extractLastName = (fullName) => {
+            // "Smith, John" パターン
             if (fullName.includes(",")) {
                 return fullName.split(",")[0].trim();
             }
-            if (fullName.includes(" ")) {
-                const parts = fullName.split(" ");
-                // 英語の場合、最後が姓であることが多い (John Smith -> Smith)。日本語の場合は最初 (山田 太郎 -> 山田) だが、
-                // メタデータ上はどう登録されているか一概に言えないので、カンマがなければ単語の最後（英語）か最初（日本語）を取る
-                return isJapanese ? parts[0] : parts[parts.length - 1]; // 英語なら最後の単語、日本語なら最初の単語（スペース区切りの場合）
-            }
-            if (fullName.includes("　")) {
-                return fullName.split("　")[0].trim(); // 全角スペース区切り
+            // "山田 太郎" や "John Smith" などスペース区切りパターン
+            // ※ 先に全角スペースを半角スペースに統一して処理する
+            const normalizedName = fullName.replace(/　/g, " ").trim();
+            if (normalizedName.includes(" ")) {
+                const parts = normalizedName.split(" ");
+                // 日本語名（全角文字を含む）の場合は「最初の単語」が姓 (山田 太郎 -> 山田)
+                // 英語名の場合は「最後の単語」が姓 (John Smith -> Smith) と推定
+                // ただし、CiNii等で "Taro Yamada" となるケースは稀なため、isJapaneseなら[0]を信用する
+                return isJapanese ? parts[0] : parts[parts.length - 1];
             }
             return fullName; // 区切りがなければそのまま
         };
