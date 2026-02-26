@@ -5,7 +5,8 @@
     "description": "閲覧中のページのURLをMarkdown形式でコピーします。一部ドメインのカテゴリ名自動変換やAmazonのURL短縮に対応しています。",
     "permissions": [
         "activeTab",
-        "clipboardWrite"
+        "clipboardWrite",
+        "scripting"
     ],
     "action": {
         "default_popup": "popup.html",
