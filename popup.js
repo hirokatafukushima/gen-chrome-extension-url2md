@@ -87,12 +87,31 @@ function extractCitationMetadata() {
     const hwAuthorTags = document.querySelectorAll('meta[name="citation_author"]');
     hwAuthorTags.forEach(tag => {
         if (tag.content) {
-            // CiNiiなどの場合、1つのタグの中に「高塩 理, 荒井 悠, 岡市 佳典」とカンマ区切りで入っていることがあるため分割する
-            const parts = tag.content.split(",");
-            parts.forEach(p => {
-                const trimmed = p.trim();
-                if (trimmed) authors.push(trimmed);
-            });
+            const content = tag.content.trim();
+            // 一つのタグ内に複数の著者がカンマ区切りで入っている場合（CiNiiなど）と、
+            // 「姓, 名」の形式で入っている場合（Frontiersなど）を区別する。
+            // 簡易判定として、"姓名"のようなスペースのない文字列が複数カンマ区切りされているか、
+            // もしくはコンマが2つ以上ある（確実に3人以上または「姓, 名, 姓, 名」）場合に分割する。
+            // しかし、最も安全なのは「"姓, 名"の形式（1つのカンマのみで、直後にスペースがある）」を1人とみなすこと。
+            // CiNiiの場合は「氏名, 氏名, 氏名」となるためカンマが複数になる、または「姓 名, 姓 名」のようになる。
+            if (content.includes(",") && content.split(",").length > 2) {
+                // 明らかに複数人いる場合
+                const parts = content.split(",");
+                parts.forEach(p => {
+                    const trimmed = p.trim();
+                    if (trimmed && !authors.includes(trimmed)) authors.push(trimmed);
+                });
+            } else if (content.includes(",") && content.split(",").length === 2 && !content.includes(" ")) {
+                // スペースがない（例: "山田太郎,田中次郎"）場合は複数人
+                const parts = content.split(",");
+                parts.forEach(p => {
+                    const trimmed = p.trim();
+                    if (trimmed && !authors.includes(trimmed)) authors.push(trimmed);
+                });
+            } else {
+                // "Smith, John" や "山田 太郎" などの1人の著者とみなす
+                if (!authors.includes(content)) authors.push(content);
+            }
         }
     });
 
@@ -111,7 +130,10 @@ function extractCitationMetadata() {
     if (authors.length === 0) {
         const dcAuthorTags = document.querySelectorAll('meta[name="dc.creator"], meta[name="DC.creator"], meta[name="dc.Creator"]');
         dcAuthorTags.forEach(tag => {
-            if (tag.content) authors.push(tag.content.trim());
+            if (tag.content) {
+                const content = tag.content.trim();
+                if (!authors.includes(content)) authors.push(content);
+            }
         });
     }
 
@@ -145,20 +167,21 @@ function extractCitationMetadata() {
                         item["@type"] === "MedicalScholarlyArticle" ||
                         (Array.isArray(item["@type"]) && item["@type"].some(t => t === "ScholarlyArticle" || t === "Article"))
                     )) {
-                        // 著者の抽出
+                        // 著者的抽出
                         if (item.author) {
                             const authorList = Array.isArray(item.author) ? item.author : [item.author];
                             for (const a of authorList) {
+                                let authorName = "";
                                 if (typeof a === "string") {
-                                    authors.push(a.trim());
+                                    authorName = a.trim();
                                 } else if (a.name) {
-                                    authors.push(a.name.trim());
+                                    authorName = a.name.trim();
                                 } else if (a.familyName) {
-                                    // JSON-LDでは familyName / givenName が分離されている場合がある
                                     const fn = a.familyName.trim();
                                     const gn = a.givenName ? a.givenName.trim() : "";
-                                    authors.push(gn ? `${fn}, ${gn}` : fn);
+                                    authorName = gn ? `${fn}, ${gn}` : fn;
                                 }
+                                if (authorName && !authors.includes(authorName)) authors.push(authorName);
                             }
                         }
                         // 出版年の抽出
