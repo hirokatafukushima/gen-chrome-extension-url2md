@@ -70,33 +70,109 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 /**
- * 現在のページのDOMから `<meta name="citation_author">` と `<meta name="citation_publication_date">` を抽出する関数
+ * 現在のページのDOMから学術論文のメタデータ（著者、出版年、タイトル）を抽出する関数。
  * この関数はWebページのコンテキスト（Content Script）内で実行されるため、外部変数は参照できません。
+ * 
+ * 以下の3つのソースから優先順位をつけて抽出を試みる：
+ * 1. HighWire Press メタタグ (citation_author 等)
+ * 2. Dublin Core メタタグ (dc.creator 等)
+ * 3. JSON-LD 構造化データ (application/ld+json)
  */
 function extractCitationMetadata() {
-    // 著者名の抽出
-    const authorTags = document.querySelectorAll('meta[name="citation_author"], meta[name="dc.creator"]');
-    const authors = [];
-    authorTags.forEach(tag => {
-        if (tag.content) {
-            // "Smith, John" や "John Smith" など様々な書式があるが、最後尾の単語やカンマ前を「姓」として扱うため
-            // ここでは一旦そのまま取得し、フォーマット時に姓名を分割する
-            authors.push(tag.content.trim());
-        }
+    let authors = [];
+    let year = "";
+    let citationTitle = "";
+
+    // --- ソース1: HighWire Press メタタグ ---
+    const hwAuthorTags = document.querySelectorAll('meta[name="citation_author"]');
+    hwAuthorTags.forEach(tag => {
+        if (tag.content) authors.push(tag.content.trim());
     });
 
-    // 出版年の抽出
-    // citation_publication_date や citation_year など
-    const dateTag = document.querySelector('meta[name="citation_publication_date"], meta[name="citation_date"], meta[name="citation_year"]');
-    let year = "";
-    if (dateTag && dateTag.content) {
-        // "2025/02", "2025" などから年（4桁）を抽出
-        const match = dateTag.content.match(/\b(19|20)\d{2}\b/);
-        if (match) {
-            year = match[0];
-        } else {
-            // 取れなかった場合は最初の4文字などを取るかフォールバック
-            year = dateTag.content.substring(0, 4);
+    const hwDateTag = document.querySelector('meta[name="citation_publication_date"], meta[name="citation_date"], meta[name="citation_year"], meta[name="citation_online_date"]');
+    if (hwDateTag && hwDateTag.content) {
+        const match = hwDateTag.content.match(/(19|20)\d{2}/);
+        if (match) year = match[0];
+    }
+
+    const hwTitleTag = document.querySelector('meta[name="citation_title"]');
+    if (hwTitleTag && hwTitleTag.content) {
+        citationTitle = hwTitleTag.content.trim();
+    }
+
+    // --- ソース2: Dublin Core メタタグ ---
+    if (authors.length === 0) {
+        const dcAuthorTags = document.querySelectorAll('meta[name="dc.creator"], meta[name="DC.creator"], meta[name="dc.Creator"]');
+        dcAuthorTags.forEach(tag => {
+            if (tag.content) authors.push(tag.content.trim());
+        });
+    }
+
+    if (!year) {
+        const dcDateTag = document.querySelector('meta[name="dc.date"], meta[name="DC.date"], meta[name="dc.Date"], meta[name="prism.publicationDate"], meta[name="prism.coverDate"]');
+        if (dcDateTag && dcDateTag.content) {
+            const match = dcDateTag.content.match(/(19|20)\d{2}/);
+            if (match) year = match[0];
+        }
+    }
+
+    if (!citationTitle) {
+        const dcTitleTag = document.querySelector('meta[name="dc.title"], meta[name="DC.title"], meta[name="dc.Title"]');
+        if (dcTitleTag && dcTitleTag.content) {
+            citationTitle = dcTitleTag.content.trim();
+        }
+    }
+
+    // --- ソース3: JSON-LD 構造化データ ---
+    if (authors.length === 0) {
+        try {
+            const ldScripts = document.querySelectorAll('script[type="application/ld+json"]');
+            for (const script of ldScripts) {
+                const data = JSON.parse(script.textContent);
+                // 単一オブジェクトまたは配列の場合を処理
+                const items = Array.isArray(data) ? data : [data];
+                for (const item of items) {
+                    if (item["@type"] && (
+                        item["@type"] === "ScholarlyArticle" ||
+                        item["@type"] === "Article" ||
+                        item["@type"] === "MedicalScholarlyArticle" ||
+                        (Array.isArray(item["@type"]) && item["@type"].some(t => t === "ScholarlyArticle" || t === "Article"))
+                    )) {
+                        // 著者の抽出
+                        if (item.author) {
+                            const authorList = Array.isArray(item.author) ? item.author : [item.author];
+                            for (const a of authorList) {
+                                if (typeof a === "string") {
+                                    authors.push(a.trim());
+                                } else if (a.name) {
+                                    authors.push(a.name.trim());
+                                } else if (a.familyName) {
+                                    // JSON-LDでは familyName / givenName が分離されている場合がある
+                                    const fn = a.familyName.trim();
+                                    const gn = a.givenName ? a.givenName.trim() : "";
+                                    authors.push(gn ? `${fn}, ${gn}` : fn);
+                                }
+                            }
+                        }
+                        // 出版年の抽出
+                        if (!year) {
+                            const dateStr = item.datePublished || item.dateCreated || "";
+                            const match = dateStr.match(/(19|20)\d{2}/);
+                            if (match) year = match[0];
+                        }
+                        // タイトルの抽出
+                        if (!citationTitle && item.name) {
+                            citationTitle = item.name.trim();
+                        } else if (!citationTitle && item.headline) {
+                            citationTitle = item.headline.trim();
+                        }
+                        if (authors.length > 0) break; // 見つかったらループ終了
+                    }
+                }
+                if (authors.length > 0) break;
+            }
+        } catch (e) {
+            // JSON-LDのパースに失敗した場合は無視して続行
         }
     }
 
@@ -104,7 +180,7 @@ function extractCitationMetadata() {
         return null;
     }
 
-    return { authors, year };
+    return { authors, year, citationTitle };
 }
 
 /**
@@ -118,7 +194,9 @@ function generateMarkdownLink(url, title, citationData) {
     if (citationData && citationData.authors && citationData.authors.length > 0) {
         const authors = citationData.authors;
         const year = citationData.year ? `, ${citationData.year}` : "";
-        const isJapanese = /[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff\xf900-\uFAFF]/.test(title || "");
+        // 言語判定：論文のcitationTitleが取れている場合はそちらを優先してチェック
+        const titleToCheck = citationData.citationTitle || title || "";
+        const isJapanese = /[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uf900-\uFAFF]/.test(titleToCheck);
 
         // 「姓」を抽出するヘルパー（"Smith, John" -> "Smith", "John Smith" -> "Smith" (簡易判定), "山田 太郎" -> "山田"）
         const extractLastName = (fullName) => {
