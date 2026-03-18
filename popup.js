@@ -228,7 +228,7 @@ function generateMarkdownLink(url, title, citationData) {
     // 1. 学術論文のメタデータが存在する場合は最優先で処理（既存のドメイン判定処理には進まない）
     if (citationData && citationData.authors && citationData.authors.length > 0) {
         const authors = citationData.authors;
-        const year = citationData.year ? `, ${citationData.year}` : "";
+        const year = citationData.year ? ` (${citationData.year})` : "";
         // 言語判定：論文のcitationTitleが取れている場合はそちらを優先してチェック
         const titleToCheck = citationData.citationTitle || title || "";
         const isJapanese = /[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uf900-\uFAFF]/.test(titleToCheck);
@@ -288,7 +288,7 @@ function generateMarkdownLink(url, title, citationData) {
         } else if (hostname.includes('mail.google.com')) {
             category = 'Gmail';
         } else if (hostname.includes('amazon')) {
-            category = 'Amazon page';
+            category = 'Amazon';
             // ASINを抽出して短縮URLを作成 (dp/ASIN または gp/product/ASIN など)
             const asinMatch = url.match(/(?:dp|gp\/product|gp\/aw\/d|exec\/obidos\/ASIN)\/([A-Z0-9]{10})/i);
             if (asinMatch && asinMatch[1]) {
